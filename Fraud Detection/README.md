@@ -1,6 +1,6 @@
 Forensic Fraud Detection Engine (FICA-Compliance)
 ## Project Overview
-This project delivers an automated forensic fraud triage pipeline built directly within BigQuery. Rather than relying on simple static thresholds, the engine uses windowed analytical functions to identify complex, malicious patterns—such as multi-terminal sweeps and structured smash-and-grabs—that typically bypass standard rule-based monitoring.
+This project delivers an automated forensic fraud triage pipeline built directly within BigQuery. Rather than relying on simple static thresholds, the engine uses windowed analytical functions to identify complex, malicious patterns, such as multi-terminal sweeps and structured smash-and-grabs, —that typically bypass standard rule-based monitoring.
 
 ## Forensic Pipeline Mechanics
 The engine operates on a high-velocity fact table (Fact_Transactions) and processes data through an advanced SQL view (vw_Forensic_Alerts_Triage). The pipeline is designed to eliminate "alert fatigue" by filtering out benign activity and isolating only confirmed threat signatures:
