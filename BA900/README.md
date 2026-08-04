@@ -1,6 +1,6 @@
 BA 900 Regulatory Reporting Engine (SARB Compliance Pipeline)
 ## Project Overview
-This project handles the automation for Form BA 900 compliance under the South African Banks Act, 1990. The pipeline processes around 500,000 raw balance records in Google BigQuery and pumps the clean, aggregated metrics into a risk dashboard in Looker Studio.
+This project handles the automation for Form BA 900 compliance under the South African Banks Act, 1990. The pipeline processes around 119,898 raw balance records in Google BigQuery and pumps the clean, aggregated metrics into a risk dashboard in Looker Studio.
 
 ## How the Data Flows
 The transformation logic relies on four steps inside a BigQuery view to clean, map, and weight the ledger data:
