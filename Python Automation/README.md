@@ -1,6 +1,6 @@
 Forensic Fraud Triage & Automated Alerting Engine
 ## Project Overview
-This project is an automated forensic pipeline designed to identify sophisticated financial fraud patterns that standard, rule-based systems typically miss. By leveraging BigQuery’s windowing capabilities and Python automation, the system detects high-velocity attacks like "Merchant Sweeps" and "Structured Smash-and-Grabs" in real-time. It doesn't just alert; it generates actionable forensic reports for immediate investigation.
+This project is an automated forensic pipeline designed to identify sophisticated financial fraud patterns that standard, rule-based systems typically miss. By leveraging BigQuery’s windowing capabilities and Python automation, the system detects high-velocity attacks like "Merchant Sweeps" and "Structured Smash-and-Grabs" through scheduled batch detection. It doesn't just alert; it generates actionable forensic reports for immediate investigation.
 
 ## Technical Stack
 Data Warehouse: Google BigQuery (Serverless SQL processing).
