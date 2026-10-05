@@ -1,43 +1,130 @@
-# FICA Section 28: Automated Anti-Money Laundering (AML) Split Deposit Triage Pipeline
+# AML Split Deposit Triage Pipeline (FICA Section 28 and 29)
 
-## 📌 Project Overview
-This project implements an end-to-end cloud data analytics pipeline designed to detect illicit financial structuring—commonly known as **"Smurfing"**—within a retail banking environment[cite: 5]. Under South African financial regulations, syndicates deliberately break down large, reportable cash sums into multiple micro-deposits to evade detection[cite: 5]. 
+A rule-based analytics pipeline that screens a synthetic retail banking ledger for **structured ("smurfing") cash deposits**, built in **Google BigQuery** (SQL) with a **Looker Studio** triage dashboard.
 
-This pipeline models a synthetic 10,000-row retail banking transactional ledger, applies advanced window-function analytical logic in **Google BigQuery** to catch velocity-based anomalies over calendar dates, and visualizes true-positive risk profiles through a targeted **Looker Studio** forensic triage dashboard[cite: 5].
-
----
-
-## ⚖️ South African Regulatory Framework (FICA)
-In terms of **Section 28 of the Financial Intelligence Centre Act (FICA), Act 38 of 2001**, all accountable institutions in South Africa are legally mandated to file a **Cash Threshold Report (CTR)** for any physical cash transaction exceeding **R24,999.99**[cite: 5]. 
-
-* **The Loophole Exploded:** Bad actors exploit this by executing multiple deposits under R10,000 across separate branches or intervals on the same day[cite: 5]. 
-* **The Compliance Objective:** This pipeline moves past single-transaction monitoring[cite: 5]. It evaluates historical transactional velocity per unique customer per calendar day to identify structured smurfing patterns, protecting the institution from severe Financial Intelligence Centre (FIC) non-compliance penalties[cite: 5].
+> **Note:** This is a learning and portfolio project. All data is synthetic and no real customers or institutions are involved. See [Limitations](#limitations) for what the project does and does not demonstrate.
 
 ---
 
-## 🛠️ Technical Stack
-* **Data Warehouse / Engine:** Google BigQuery (SQL)[cite: 5]
-* **Analytics Logic:** Advanced SQL Window Functions (`SUM() OVER`, `COUNT() OVER`)[cite: 5]
-* **Business Intelligence / Visualization:** Google Looker Studio[cite: 5]
-* **Data Volume:** 10,000 synthetic relational banking records spread across standard retail transaction categories (Cash Deposits, Cash Withdrawals, EFTs, Merchant Refunds)[cite: 5].
+## Project Overview
+
+Structuring (commonly called "smurfing") is the practice of breaking a large cash sum into several smaller deposits to avoid regulatory reporting. Monitoring only individual transactions will miss it, so this pipeline looks at **deposit behaviour per customer per calendar day** instead.
+
+The project covers three stages:
+
+1. **Data generation:** a 10,000-row synthetic banking ledger, with one structuring case deliberately planted.
+2. **Detection logic:** a BigQuery view that uses SQL window functions to total and count cash deposits per customer, branch and day, then flags rows that meet the structuring conditions.
+3. **Reporting:** a three-page Looker Studio dashboard that lets a compliance analyst review the flagged transactions.
 
 ---
 
-## 💾 Pipeline Logic & Core Architecture
+## Regulatory Context
 
-The core intelligence of this pipeline resides in a dual-layered SQL database view layer (`Split Deposit Triage Script_2.sql`). Rather than filtering raw rows blindly (which triggers false positives for legitimate, high-volume cash businesses like spaza shops or filling stations), the engine runs a rigorous validation framework[cite: 5]:
+Under **section 28 of the Financial Intelligence Centre Act 38 of 2001 (FICA)**, accountable institutions must report cash transactions above a prescribed amount to the Financial Intelligence Centre (FIC) in a cash threshold report (CTR).
 
-1. **Dynamic Daily Partitioning:** The pipeline partitions the transaction ledger by unique customer ID and crops it into strict calendar-day boundaries using analytical window functions, aggregating total daily cash inflows dynamically.
-2. **Multiplicity Verification:** The engine explicitly checks for the **Multiplicity Rule** (`Daily_Deposit_Count > 1`)[cite: 5]. An anomaly is only surfaced if a customer makes multiple cash injections on the same day, keeping individual deposit thresholds strictly beneath the automated R10,000 detection flags while collectively breaching the legal R24,999.99 limit.
+* **Threshold used in this project:** R24,999.99, the prescribed amount before 14 November 2022.
+* **Current position:** Regulation 22B was amended with effect from 14 November 2022, raising the prescribed amount to **R49,999.99**. The same amendments extended the reporting period from two days to three, and removed the requirement to aggregate a series of cash transactions for CTR purposes.
+* **Why structuring is still relevant:** FIC Guidance Note 5C recommends that institutions monitor cash transactions below the threshold as well, and consider a **section 29** suspicious and unusual transaction report where one client makes multiple sub-threshold cash transactions.
+
+The pipeline was built against the former R24,999.99 figure. The value is held as a single constant in the view, so updating it to the current threshold is a one-line change. The project is best read as a demonstration of the analytical approach (daily velocity per customer) and not as a statement of current CTR requirements.
 
 ---
 
-## 📊 Forensic Reporting & Analytics Layer
+## Technical Stack
 
-The final layer transforms the analytical output of the pipeline view into an actionable, forensic dashboard inside **Looker Studio** for corporate compliance officers.
+| Layer | Tool |
+|---|---|
+| Data warehouse and query engine | Google BigQuery (SQL) |
+| Analytical techniques | Common table expressions (CTEs), window functions (`SUM() OVER`, `COUNT() OVER`), `CASE` logic, SQL views |
+| Dashboard | Google Looker Studio |
+| Data | 10,000 synthetic transaction records |
 
-### 1. Triage Queue (`Table View.png`)
-The primary monitoring interface surfaces structured, row-by-row transaction line items flagged by the pipeline. Rather than displaying detached raw totals, it couples each individual physical transaction amount side-by-side with the dynamically computed `Daily_Deposit_Total`. This interface allows analysts to immediately trace a suspect's full geographical movement across multiple branches and see precisely how individual transactions aggregated to breach the regulatory R24,999.99 limit.
+---
 
-### 2. Operational Volume Metrics (`Bar Graph.png`)
-To support compliance resource allocation, the interface maps out total flagged event records distributed across physical banking channels. This layout highlights operational pressure points across branches, identifying locations that exhibit higher frequencies of structuring behavior.
+## Repository Contents
+
+| File | Purpose |
+|---|---|
+| `Data_generation_script.sql` | Creates `FICA_Pipeline.Fact_Banking_Transactions` with 10,000 synthetic rows |
+| `Split_Deposit_Triage_Script.sql` | Creates the view `FICA_Pipeline.vw_Split_Deposit_Triage` containing the detection logic |
+| `Fact_Banking_Transactions.png` | Preview of the generated BigQuery table |
+| `Table_View.png` | Dashboard page 1: triage queue |
+| `Bar_Graph.png` | Dashboard page 2: flagged records by branch |
+| `Pivot_Table_View.png` | Dashboard page 3: deposit matrix by customer and branch |
+
+---
+
+## Data Model
+
+The ledger table `Fact_Banking_Transactions` has these fields:
+
+`Transaction_ID`, `Account_Number`, `Customer_ID`, `Transaction_Timestamp`, `Transaction_Type`, `Branch_ID`, `Transaction_Amount_ZAR`
+
+* **Transaction types:** Cash Deposit, Cash Withdrawal, EFT Transfer, Merchant Refund.
+* **Scale:** 100 customers, 150 accounts, 5 branches, with timestamps spread over a 14-day window.
+* **Planted case:** customer `ZA-CUST-000014` is forced to make 100 cash deposits of R9,450, R8,900 or R7,200, all at `BR-PRETORIA-E` and all sharing one timestamp three days before the data was generated. Together they total **R852,050**.
+* **Baseline data:** the remaining rows are generated using modulo arithmetic on a row index. As a result, each customer is assigned a single transaction type and a single branch, which means some customers only ever make cash deposits.
+
+---
+
+## Detection Logic
+
+The view `vw_Split_Deposit_Triage` works in two CTE layers:
+
+1. **Daily aggregation (`CTE_First`):** filters to cash deposits, then uses window functions partitioned by `Customer_ID`, `Branch_ID` and calendar date to calculate `Daily_Deposit_Total` and `Daily_Deposit_Count` for every row.
+2. **Flagging (`CTE_Second`):** labels a row `SPLIT DEPOSIT SUSPICION` when **all** of the following are true:
+   * the individual deposit is below R10,000 (an illustrative design parameter, not a legal requirement)
+   * the daily total for that customer at that branch exceeds R24,999.99
+   * the daily deposit count is greater than 1 (the multiplicity condition)
+
+The final `SELECT` returns only the flagged rows, with their daily total and count alongside each individual deposit.
+
+---
+
+## Dashboard
+
+The Looker Studio report ("Split Deposit Triage") has three pages:
+
+1. **Triage queue (`Table_View.png`):** each flagged deposit shown with its account, customer, branch, transaction ID and amount, next to the `Daily_Deposit_Total` it contributed to. This lets an analyst see how individual deposits add up to a total above the threshold.
+2. **Flagged records by branch (`Bar_Graph.png`):** record counts per branch. Pretoria is higher than the other four branches by roughly 100 records, which corresponds to the planted case.
+3. **Deposit matrix (`Pivot_Table_View.png`):** customers and timestamps against branches, showing deposit amounts per branch.
+
+---
+
+## Results
+
+The view returns **2,260 flagged rows**:
+
+* 100 rows belong to the planted case (`ZA-CUST-000014`), which is correctly flagged.
+* The other **2,160 rows** come from baseline customers whose synthetic data happens to produce several cash deposits per day with totals above the threshold.
+
+In other words, the rule reliably catches the planted pattern, but on this dataset it also flags a large share of ordinary cash-deposit activity. This is discussed below.
+
+---
+
+## Limitations
+
+* **Synthetic data:** the data is generated with simple arithmetic patterns and does not reflect real customer behaviour. Results say nothing about how the rule would perform on real transactions.
+* **High volume of flags:** because of how the baseline data is generated, the rule flags most baseline cash deposits. A production rule would need customer risk profiling, expected-activity baselines and tuned thresholds to keep false positives manageable.
+* **Single-branch aggregation:** totals are calculated per customer **per branch** per day. Deposits spread across several branches are not combined, so cross-branch structuring would not be detected as written.
+* **Outdated threshold:** the pipeline uses the pre-November 2022 R24,999.99 figure (see [Regulatory Context](#regulatory-context)).
+* **Flags are indicators only:** a flag is a prompt for analyst review, not a finding of wrongdoing.
+
+---
+
+## Possible Improvements
+
+* Update the constant to the current R49,999.99 threshold and re-run the pipeline.
+* Partition by customer and day only, so that deposits across branches are combined.
+* Add rolling-window velocity measures (for example, deposits over the previous 24 hours or 7 days) in place of calendar-day totals.
+* Compare each customer against their own historical average deposit pattern instead of a fixed threshold.
+* Generate more realistic baseline data, with mixed transaction types per customer, so that the rule can be evaluated for false positives properly.
+
+---
+
+## How to Reproduce
+
+1. Create a BigQuery dataset named `FICA_Pipeline`.
+2. Run `Data_generation_script.sql` to create the ledger table.
+3. Run `Split_Deposit_Triage_Script.sql` to create the triage view.
+4. Connect the view to Looker Studio as a data source and build the three report pages.
